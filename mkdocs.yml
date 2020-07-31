@@ -1,7 +1,7 @@
 site_name: dib-lab NSURP project
-site_url: http://bluegenes.github.io/2020-NSURP/
+site_url: http://dib-lab.github.io/2020-NSURP/
 repo_name: 2020-NSURP
-repo_url: https://github.com/bluegenes/2020-NSURP
+repo_url: https://github.com/dib-lab/2020-NSURP
 edit_uri: ""
 
 copyright: 'Copyright &copy; 2020 <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology</a> at UC Davis'
