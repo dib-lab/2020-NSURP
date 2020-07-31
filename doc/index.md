@@ -14,8 +14,6 @@ During this project, you will learn how to:
  + quickly compare large sequencing datasets
  + document workflows using git and GitHub. 
  
-The files in this repository are ordered by execution, meaning file `00*` should be completed before `01*`. 
-
 Most of the work done in this rotation will be completed on Farm. 
 However, you will need to access Farm from your own computer. 
 We will use an SSH-client to be able to interact with Farm. 
