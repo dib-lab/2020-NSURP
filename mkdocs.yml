@@ -29,6 +29,8 @@ theme:
 # optionally give a title for each page or section
 nav:
   - 'Home': 'index.md'
-  - "Setting up Farm": 01.using-farm.md"
-  - "Using Conda": "02.conda.md"
+  - "Setup":
+    - "Setting up Farm": "01.using-farm.md"
+    - "Intall Conda": "02.conda.md"
   - "Keeping a Lab Notebook": "03.lab-notebook.md"
+  - "Try Sourmash!": "04.sourmash-tutorial.md"
