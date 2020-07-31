@@ -31,6 +31,6 @@ nav:
   - 'Home': 'index.md'
   - "Setup":
     - "Setting up Farm": "01.using-farm.md"
-    - "Intall Conda": "02.conda.md"
+    - "Install Conda": "02.conda.md"
   - "Keeping a Lab Notebook": "03.lab-notebook.md"
   - "Try Sourmash!": "04.sourmash-tutorial.md"
