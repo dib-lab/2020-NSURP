@@ -9,7 +9,7 @@ It incorporates bioinformatics skills like unix, documenting workflows, and usin
 It covers the use of tools like sourmash and spacegraphcats. 
 
 The material in this repository was primarily written or aggregated by @bluegenes, @taylorreiter, and @hehouts. 
-It builds on tutorials from the following sources:
+It adapts and builds on tutorials from the following sources:
 
 + DIB-Lab Metagenomics Rotation Project: https://github.com/dib-lab/dib_rotation
 + ANGUS: https://angus.readthedocs.io/en/2019/index.html
