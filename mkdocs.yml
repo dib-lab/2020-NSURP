@@ -34,3 +34,4 @@ nav:
     - "Install Conda": "02.conda.md"
   - "Keeping a Lab Notebook": "03.lab-notebook.md"
   - "Try Sourmash!": "04.sourmash-tutorial.md"
+  - "Download IBD Data": "05.download-assess-ibd-data.md"
