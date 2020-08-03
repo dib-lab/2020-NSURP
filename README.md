@@ -15,3 +15,4 @@ It adapts and builds on tutorials from the following sources:
 + ANGUS: https://angus.readthedocs.io/en/2019/index.html
 + HPC Carpentry: https://hpc-carpentry.github.io/
 + Data Carpentry Genomics: https://datacarpentry.org/genomics-workshop/
++ CICESE Metatranscriptomics: https://github.com/ngs-docs/2018-cicese-metatranscriptomics
