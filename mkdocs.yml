@@ -37,4 +37,4 @@ nav:
   - "Starting a Work Session": "05.starting-a-work-session.md"
   - "IBD Research Project":
     - "Download and Visually Assess the Data": "06.download-assess-ibd-data.md"
-    #- "Quality Control the Data": "06.quality-control.md"
+    - "Quality Control the Data": "06.quality-control.md"
