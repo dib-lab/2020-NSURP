@@ -38,4 +38,4 @@ nav:
   - "IBD Research Project":
     - "Download and Visually Assess": "06.download-assess-ibd-data.md"
     - "Quality Control": "07.quality-control.md"
-    - "Taxonomic Classification with Sourmash": "08.taxonomic-classification-with-sourmash.md"
+    - "Taxonomic Discovery with Sourmash": "08.taxonomic-discovery-with-sourmash.md"
