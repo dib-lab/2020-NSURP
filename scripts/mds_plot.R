@@ -1,3 +1,4 @@
+# slighly modified from https://raw.githubusercontent.com/ngs-docs/2018-cicese-metatranscriptomics/master/scripts/mds_plot.R
 args = commandArgs(trailingOnly=TRUE)
 
 library(ggplot2)
@@ -15,7 +16,7 @@ fit <- dist(comp)
 fit <- cmdscale(fit)
 fit <- as.data.frame(fit)
 
-fit$lab <- rownames(fit) #gsub("_5.20_rep[1,2]_1m.khmer.pe.fq.gz", "", rownames(fit))
+fit$lab <- rownames(fit) 
 
 plt <- ggplot(fit, aes(x = V1, y = V2)) +
         geom_point() + 
