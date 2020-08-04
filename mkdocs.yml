@@ -39,3 +39,4 @@ nav:
     - "Download and Visually Assess": "06.download-assess-ibd-data.md"
     - "Quality Control": "07.quality-control.md"
     - "Taxonomic Discovery with Sourmash": "08.taxonomic-discovery-with-sourmash.md"
+    - "Comparing Samples with Sourmash": "09.comparing-samples-with-sourmash.md"
