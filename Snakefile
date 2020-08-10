@@ -11,11 +11,13 @@ logs_dir = os.path.join(out_dir, "logs")
 
 rule all:
     input:
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_genbank-k{ksize}.csv"), sample=SAMPLES, ksize=31, alphabet="dna"), #[21,31,51])
+        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_genbank-k{ksize}.csv"), sample=SAMPLES, ksize=[21,31,51], alphabet="dna"), #[21,31,51])
         expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
+        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
+        #expand(os.path.join(out_dir, "gather_to_tax", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
         expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
+        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
+        #expand(os.path.join(out_dir, "gather_to_tax", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
         #expand(os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf"), sample=SAMPLES, alphabet="dna", ksize=[21,31,51]),
         #expand(os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf"), sample=SAMPLES, alphabet="protein", ksize=[33]),
         #expand(os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf"), sample=SAMPLES, alphabet="dayhoff", ksize=[57]),
@@ -53,6 +55,9 @@ rule trim_reads:
         out2=os.path.join(out_dir, "trim", "{sample}_2.trim.fastq.gz"),
         json=os.path.join(out_dir, "trim", "{sample}.fastp.json"),
         html=os.path.join(out_dir, "trim", "{sample}.fastp.html")
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=600,
     shell:
         """
         fastp --in1 {input.in1}  --in2 {input.in2}  \
@@ -73,6 +78,9 @@ rule remove_host:
         human_r1=os.path.join(out_dir, "bbduk", "{sample}_1.human.fq.gz"),
         human_r2=os.path.join(out_dir, "bbduk", "{sample}_2.human.fq.gz")
     conda: 'envs/bbduk-env.yml'
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *64000,
+        runtime=600,
     shell:
         """
         bbduk.sh -Xmx64g t=3 in={input.r1} in2={input.r2} out={output.r1} out2={output.r2} outm={output.human_r1} outm2={output.human_r2} k=31 ref={input.human}
@@ -85,12 +93,14 @@ rule kmer_trim:
     output:
         os.path.join(out_dir, "kmer-trim", "{sample}.nohost.kmer-trim.pe.fastq.gz"),
     conda: 'envs/bbduk-env.yml'
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *5000,
+        runtime=600,
     shell:
         """
         interleave-reads.py {input.r1} {input.r2} |
         trim-low-abund.py --gzip -C 3 -Z 18 -M 20e9 -V - -o {output}
         """
-
 
 ksizesD={"dna": "21,31,51", "protein": "33", "dayhoff": "57"}
 scaledD={"dna": "2000", "protein": "100", "dayhoff": "100"}
@@ -105,6 +115,9 @@ rule sourmash_compute:
         abund_cmd= "--track-abundance"
     log: os.path.join(logs_dir, "sourmash", "{alphabet}", "{sample}.nohost.kmer-trim.pe.compute.log")
     conda: "envs/sourmash-env.yml"
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *5000,
+        runtime=600,
     shell:
         """
         sourmash compute -k {params.k} --scaled={params.scaled}  \
@@ -119,16 +132,24 @@ rule sourmash_compare:
     params:
         alpha_cmd = lambda wildcards: "--" + wildcards.alphabet 
     conda: "envs/sourmash-env.yml"
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *5000,
+        runtime=60,
     shell:
         """
         sourmash compare -k {wildcards.ksize} -o {output.np} --csv {output.csv} --ignore-abundance {params.alpha_cmd}
         """
+
+localrules: sourmash_plot
 
 rule sourmash_plot:
     input: rules.sourmash_compare.output.np
     output:
         matrix = os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf")
     conda: "envs/sourmash-env.yml"
+    #resources:
+    #    mem_mb=lambda wildcards, attempt: attempt *1000,
+    #    runtime=60,
     shell:
         """
         sourmash plot --labels {input}
@@ -144,6 +165,9 @@ rule sourmash_gather_genbank:
     params:
         #threshold="10000000",
         alpha_cmd=lambda wildcards: "--" + wildcards.alphabet
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=600,
     shell:
         """
         sourmash gather {input.sig} {input.ref} -o {output.csv} {params.alpha_cmd} -k {wildcards.ksize}
@@ -151,31 +175,59 @@ rule sourmash_gather_genbank:
         #  --threshold-bp {params.threshold}
 
 
-#pepD={"protein": "databases/gtdb_pep.protein_scaled100_k11.index.sbt.zip", "dayhoff":"databases/gtdb_pep.dayhoff_scaled100_k19.index.sbt.zip"}
-pepD={"protein": "databases/"gtdb_pep.rep_genus.protein_scaled100_k11.sbt.zip, "dayhoff":"databases/gtdb_pep.rep_genus.dayhoff_scaled100_k19.sbt.zip"}
+pepD_full={"protein": "databases/gtdb_pep.protein_scaled100_k11.index.sbt.zip", "dayhoff":"databases/gtdb_pep.dayhoff_scaled100_k19.index.sbt.zip"}
+pepD={"protein": "databases/gtdb_pep.rep_genus.protein_scaled100_k11.sbt.zip", "dayhoff":"databases/gtdb_pep.rep_genus.dayhoff_scaled100_k19.sbt.zip"}
 
 rule gather_gtdb_pep_rep:
     input:
-        query=os.path.join(out_dir, "sourmash_signatures", "{alphabet}", "{sample}.nohost.kmer-trim.pe.sig")
+        query=os.path.join(out_dir, "sourmash_signatures", "{alphabet}", "{sample}.nohost.kmer-trim.pe.sig"),
         db=lambda w: pepD[w.alphabet]
     output:
-        csv = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv") 
-        matches = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.matches")
+        csv = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"),
+        matches = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.matches"),
         unassigned = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.unassigned")
     params:
         alpha_cmd = lambda w: "--" + w.alphabet,
         scaled = 100,
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
-        runtime=200,
+        runtime=600,
     log: os.path.join(logs_dir, "gather", "{alphabet}-k{ksize}",  "{sample}_x_gtdb_pep.rep_genus.{alphabet}-k{ksize}.gather.log")
     benchmark: os.path.join(logs_dir, "gather","{alphabet}-k{ksize}", "{sample}_x_gtdb_pep.rep_genus.{alphabet}-k{ksize}.gather.benchmark")
-    conda: "envs/sourmash-dev.yml"
+    conda: "envs/sourmash-env.yml"
     shell:
         # --ignore-abundance to turn abund off
         """
         sourmash gather {input.query} {input.db} -o {output.csv} {params.alpha_cmd} \
-        --save-matches {output.matches} --threshold-bp=0  \
+        --save-matches {output.matches} \
+        --output-unassigned {output.unassigned} \
+        --scaled {params.scaled} \
+        -k {wildcards.ksize} 2> {log}
+        touch {output}
+        """
+
+rule gather_gtdb_pep_full:
+    input:
+        query=os.path.join(out_dir, "sourmash_signatures", "{alphabet}", "{sample}.nohost.kmer-trim.pe.sig"),
+        db=lambda w: pepD_full[w.alphabet]
+    output:
+        csv = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"),
+        matches = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.matches"),
+        unassigned = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.unassigned")
+    params:
+        alpha_cmd = lambda w: "--" + w.alphabet,
+        scaled = 100,
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *10000,
+        runtime=600,
+    log: os.path.join(logs_dir, "gather", "{alphabet}-k{ksize}",  "{sample}_x_gtdb_pep.{alphabet}-k{ksize}.gather.log")
+    benchmark: os.path.join(logs_dir, "gather","{alphabet}-k{ksize}", "{sample}_x_gtdb_pep.{alphabet}-k{ksize}.gather.benchmark")
+    conda: "envs/sourmash-env.yml"
+    shell:
+        # --ignore-abundance to turn abund off
+        """
+        sourmash gather {input.query} {input.db} -o {output.csv} {params.alpha_cmd} \
+        --save-matches {output.matches} \
         --output-unassigned {output.unassigned} \
         --scaled {params.scaled} \
         -k {wildcards.ksize} 2> {log}
@@ -187,15 +239,15 @@ rule gather_to_tax_pep_rep:
         gather_csv = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"),
         lineages_csv = "databases/gtdb-lineages.protein-filenames.representative-at-genus.csv"
     output:
-        gather_tax = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"),
-        top_matches = os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_tophits.csv"),
+        gather_tax = os.path.join(out_dir, "gather_to_tax", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"),
+        top_matches = os.path.join(out_dir, "gather_to_tax", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_tophits.csv"),
     log: os.path.join(logs_dir, "gather_to_tax", "{alphabet}-k{ksize}", "{sample}_x_gtdb_pep.rep_genus.{alphabet}-k{ksize}.gather-to-tax.log")
     benchmark: os.path.join(logs_dir, "gather_to_tax", "{alphabet}-k{ksize}","{sample}_x_gtdb_pep.rep_genus.{alphabet}-k{ksize}.gather-to-tax.benchmark")
     group: "gather"
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
         runtime=200,
-    conda: "envs/sourmash-dev.yml"
+    conda: "envs/sourmash-env.yml"
     shell:
         """
         python scripts/gather-to-tax.py {input.gather_csv} {input.lineages_csv} --tophits-csv {output.top_matches} > {output.gather_tax} 2> {log}
