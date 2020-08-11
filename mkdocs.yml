@@ -40,5 +40,6 @@ nav:
     - "Quality Control": "07.quality-control.md"
     - "Taxonomic Discovery with Sourmash": "08.taxonomic-discovery-with-sourmash.md"
     - "Comparing Samples with Sourmash": "09.comparing-samples-with-sourmash.md"
+    - "Experiment Challenge": "11.experiment-challenge.md"
   - "Advanced Modules":
     - "Automation, Workflows, and Repeatability": "10.workflows-and-repeatability.md"
