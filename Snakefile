@@ -1,27 +1,41 @@
 ## NSURP IBD Analysis ##
-import pandas
+import pandas as pd
 
-SAMPLES = ["SRR1211157", "SRR1211428", "SRR1211440", "SRR1211568", "SRR1757110", "SRR1765025"]
+
+#sample_info = pd.read_csv("ihmp-CD-nonIBD-tiny_subset.csv")
+sample_info = pd.read_csv("ihmp-CD-nonIBD-subset.csv")
+# need to filter out any "External ID" with underscores in them
+sample_info = sample_info[~sample_info["External ID"].str.contains("_")]
+
+SAMPLES = sample_info["External ID"].tolist()
+
+#patient_id = sample_info["Participant ID"]
+#sample_id = sample_info["External ID"]
+#diagnosis = sample_info["diagnosis"]
+
+#SAMPLES = ["SRR1211157", "SRR1211428", "SRR1211440", "SRR1211568", "SRR1757110", "SRR1765025"]
 
 #samples_csv= "ibd_samples.csv"
 # to do: read the samples from csv instead
 
-out_dir = "outputs"
+out_dir = "iHMP_project"
 logs_dir = os.path.join(out_dir, "logs")
 
 rule all:
     input:
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_genbank-k{ksize}.csv"), sample=SAMPLES, ksize=[21,31,51], alphabet="dna"), #[21,31,51])
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
+        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_genbank-k{ksize}.csv"), sample=SAMPLES, ksize=[31], alphabet="dna"), #[21,31,51]
+        #expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
+        #expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
+        #expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
+        #expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
+        
+
+        #expand(os.path.join(out_dir, "megahit", "{sample}_contigs.fa", sample=SAMPLES),        
         #expand(os.path.join(out_dir, "gather_to_tax", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"), sample=SAMPLES, alphabet="protein", ksize=33),
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
-        expand(os.path.join(out_dir, "gather", "{alphabet}", "{sample}_x_gtdb_pep-k{ksize}.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
         #expand(os.path.join(out_dir, "gather_to_tax", "{alphabet}", "{sample}_x_gtdb_pep.rep_genus-k{ksize}.gather_summary.csv"), sample=SAMPLES, alphabet="dayhoff", ksize=57),
         #expand(os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf"), sample=SAMPLES, alphabet="dna", ksize=[21,31,51]),
         #expand(os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf"), sample=SAMPLES, alphabet="protein", ksize=[33]),
         #expand(os.path.join(out_dir, "compare","{sample}.{alphabet}-k{ksize}.compare.np.matrix.pdf"), sample=SAMPLES, alphabet="dayhoff", ksize=[57]),
-        
 
 #rule download_hostseqs:
 ## http://seqanswers.com/forums/archive/index.php/t-42552.html
@@ -35,26 +49,46 @@ rule all:
 #        wget {params.download_link} > {output} 2> {log}
 #        """
 
-#rule download_reads:
-#    output:
-#        r1=os.path.join(out_dir, "raw_data", "{sample}_1.fastq.gz"),
-#        r2=os.path.join(out_dir, "raw_data", "{sample}_2.fastq.gz"),
-#    params:
-#        download_link = lambda wildcards: samples_csv[wildcards.sample][""]
-#    shell:
-#        """
-#        wget {params.download_link} > {output}
-#        """
+localrules: download_reads
+rule download_reads:
+    output:
+        tar=os.path.join(out_dir, "raw_data", "{sample}.tar"),
+    params:
+        download_link = lambda w: f"https://ibdmdb.org/tunnel/static/HMP2/WGS/1818/{w.sample}.tar"
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *4000,
+        runtime=600,
+    shell:
+        """
+        curl -L {params.download_link} -o {output.tar}
+        """
+
+localrules: untar_reads
+rule untar_reads:
+    input: os.path.join(out_dir, "raw_data", "{sample}.tar"),
+    output:
+        r1=os.path.join(out_dir, "raw_data", "{sample}_R1.fastq.gz"),
+        r2=os.path.join(out_dir, "raw_data", "{sample}_R2.fastq.gz"),
+    params:
+        output_dir= os.path.join(out_dir, "raw_data")
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt *4000,
+        runtime=600,
+    shell:
+        """
+        tar -xf {input} --directory {params.output_dir}
+        """
 
 rule trim_reads:
     input:
-        in1=os.path.join(out_dir, "raw_data", "{sample}_1.fastq.gz"),
-        in2=os.path.join(out_dir, "raw_data", "{sample}_2.fastq.gz"),
+        in1=os.path.join(out_dir, "raw_data", "{sample}_R1.fastq.gz"),
+        in2=os.path.join(out_dir, "raw_data", "{sample}_R2.fastq.gz"),
     output:
         out1=os.path.join(out_dir, "trim", "{sample}_1.trim.fastq.gz"),
         out2=os.path.join(out_dir, "trim", "{sample}_2.trim.fastq.gz"),
         json=os.path.join(out_dir, "trim", "{sample}.fastp.json"),
         html=os.path.join(out_dir, "trim", "{sample}.fastp.html")
+    conda: 'envs/fastp-env.yml'
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
         runtime=600,
@@ -78,12 +112,13 @@ rule remove_host:
         human_r1=os.path.join(out_dir, "bbduk", "{sample}_1.human.fq.gz"),
         human_r2=os.path.join(out_dir, "bbduk", "{sample}_2.human.fq.gz")
     conda: 'envs/bbduk-env.yml'
+    threads: 4
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *64000,
-        runtime=600,
+        mem_mb=62500,
+        runtime=6000,
     shell:
         """
-        bbduk.sh -Xmx64g t=3 in={input.r1} in2={input.r2} out={output.r1} out2={output.r2} outm={output.human_r1} outm2={output.human_r2} k=31 ref={input.human}
+        bbduk.sh -Xmx64g t=4 in={input.r1} in2={input.r2} out={output.r1} out2={output.r2} outm={output.human_r1} outm2={output.human_r2} k=31 ref={input.human}
         """
 
 rule kmer_trim:
@@ -92,9 +127,9 @@ rule kmer_trim:
         r2 = os.path.join(out_dir, "bbduk", "{sample}_2.nohost.fq.gz"),
     output:
         os.path.join(out_dir, "kmer-trim", "{sample}.nohost.kmer-trim.pe.fastq.gz"),
-    conda: 'envs/bbduk-env.yml'
+    conda: 'envs/khmer-env.yml'
     resources:
-        mem_mb=lambda wildcards, attempt: attempt *5000,
+        mem_mb=lambda wildcards, attempt: attempt *20000,
         runtime=600,
     shell:
         """
@@ -167,7 +202,7 @@ rule sourmash_gather_genbank:
         alpha_cmd=lambda wildcards: "--" + wildcards.alphabet
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
-        runtime=600,
+        runtime=6000,
     shell:
         """
         sourmash gather {input.sig} {input.ref} -o {output.csv} {params.alpha_cmd} -k {wildcards.ksize}
@@ -219,7 +254,7 @@ rule gather_gtdb_pep_full:
         scaled = 100,
     resources:
         mem_mb=lambda wildcards, attempt: attempt *10000,
-        runtime=600,
+        runtime=6000,
     log: os.path.join(logs_dir, "gather", "{alphabet}-k{ksize}",  "{sample}_x_gtdb_pep.{alphabet}-k{ksize}.gather.log")
     benchmark: os.path.join(logs_dir, "gather","{alphabet}-k{ksize}", "{sample}_x_gtdb_pep.{alphabet}-k{ksize}.gather.benchmark")
     conda: "envs/sourmash-env.yml"
@@ -282,9 +317,9 @@ rule gather_to_tax_pep_rep:
 #    params:
 #        megahit_dir=os.path.join(out_dir, "megahit")
 #    threads: 10
-#    resources:
+##    resources:
 #        mem_mb=20000,
-#        runtime=600
+#        runtime=6000
 #    log: os.path.join(logs_dir, "megahit", "{sample}_megahit.log")
 #    benchmark: os.path.join(logs_dir, "megahit", "{sample}_megahit.benchmark")
 #    conda: "envs/megahit-env.yaml"
