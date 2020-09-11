@@ -43,3 +43,4 @@ nav:
     - "Experiment Challenge": "11.experiment-challenge.md"
   - "Advanced Modules":
     - "Automation, Workflows, and Repeatability": "10.workflows-and-repeatability.md"
+    - "Version Control with Git and GitHub":  "12.angus-github.md"
