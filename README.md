@@ -1,4 +1,6 @@
-# DIB Lab NSURP Research Project
+# DIB Lab NSURP Research Project 2020
+
+[![DOI](https://zenodo.org/badge/284118125.svg)](https://zenodo.org/badge/latestdoi/284118125)
 
 Welcome to the project home for our NSURP research materials! The [training website](https://dib-lab.github.io/2020-NSURP/) contains a much prettier (rendered) version of these materials - check it out!
 
